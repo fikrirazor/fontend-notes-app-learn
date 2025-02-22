@@ -44,8 +44,18 @@ const App = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+
+  const handleNoteClick = (note: Note) => {
+    setSelectedNote(note);
+    setTitle(note.title);
+    setContent(note.content);
+  };
+
+  // Fungsi handle saat submit
+  const handdleAddNote = (event: React.FormEvent) => {
     event.preventDefault(); // mencegah halaman reload
+    // untuk cek apakah berfungsi fungsinya
     console.log("title: ", title);
     console.log("content: ", content);
 
@@ -63,15 +73,58 @@ const App = () => {
     // Contoh TANPA ... (hasil salah ❌): ["🍊", ["🍎", "🍌"]] (ada array di dalam array!)
     // Tanda ... digunakan untuk "membuka bungkus" array notes.
     // ... (Spread Operator)
-    setNotes([newNote, ...notes]); 
+    setNotes([newNote, ...notes]);
 
     setTitle("");
     setContent("");
   };
-  
+
+  const handleUpdateNote = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!selectedNote) {
+      return;
+    }
+
+    const updateNote: Note = {
+      id: selectedNote.id,
+      title: title,
+      content: content,
+    };
+
+    const updatedNotesList = notes.map((note) =>
+      note.id === selectedNote.id ? updateNote : note
+    );
+
+    setNotes(updatedNotesList);
+    setTitle("");
+    setContent("");
+    setSelectedNote(null);
+  };
+
+  const handleCancel = () => {
+    setTitle("");
+    setContent("");
+    setSelectedNote(null);
+  };
+
+  const deleteNote = (event: React.MouseEvent, noteId:number) => {
+    event.stopPropagation();
+
+    const updatedNotes = notes.filter(
+      (note)=> note.id !== noteId
+    )
+
+    setNotes(updatedNotes);
+  }
   return (
     <div className="app-container">
-      <form className="note-form" onSubmit={(event) => handleSubmit(event)}>
+      <form
+        className="note-form"
+        onSubmit={(event) =>
+          selectedNote ? handleUpdateNote(event) : handdleAddNote(event)
+        }
+      >
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
@@ -80,14 +133,21 @@ const App = () => {
           value={content}
           onChange={(event) => setContent(event.target.value)}
         />
-
+        {selectedNote ? (
+          <div className="edit-buttons">
+            <button type="submit">Save</button>
+            <button onClick={handleCancel}>Cancel</button>
+          </div>
+        ) : (
+          <button type="submit">Add Note</button>
+        )}
         <button type="submit">Add Note</button>
       </form>
       <div className="notes-grid">
         {notes.map((note) => (
-          <div className="note-item">
+          <div className="note-item" onClick={() => handleNoteClick(note)}>
             <div className="notes-header">
-              <button>x</button>
+              <button onClick={(event)=>deleteNote(event, note.id)}>x</button>
             </div>
             <h2>{note.title}</h2>
             <p>{note.content}</p>
