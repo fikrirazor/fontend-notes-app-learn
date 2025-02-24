@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 type Note = {
@@ -8,43 +8,27 @@ type Note = {
 };
 
 const App = () => {
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: 1,
-      title: "test note 1",
-      content: "bla bla note1",
-    },
-    {
-      id: 2,
-      title: "test note 2 ",
-      content: "bla bla note2",
-    },
-    {
-      id: 3,
-      title: "test note 3",
-      content: "bla bla note3",
-    },
-    {
-      id: 4,
-      title: "test note 4 ",
-      content: "bla bla note4",
-    },
-    {
-      id: 5,
-      title: "test note 5",
-      content: "bla bla note5",
-    },
-    {
-      id: 6,
-      title: "test note 6",
-      content: "bla bla note6",
-    },
-  ]);
+  const [notes, setNotes] = useState<Note[]>([]);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const response = await fetch("http://localhost:5000:/api/notes");
+
+        const notes: Note[] = await response.json();
+
+        setNotes(notes);
+      } catch (e) {
+        console.log(e);
+      }
+    };
+    fetchNotes();
+  }, []);
 
   const handleNoteClick = (note: Note) => {
     setSelectedNote(note);
@@ -53,30 +37,34 @@ const App = () => {
   };
 
   // Fungsi handle saat submit
-  const handdleAddNote = (event: React.FormEvent) => {
+  const handdleAddNote = async (event: React.FormEvent) => {
     event.preventDefault(); // mencegah halaman reload
-    // untuk cek apakah berfungsi fungsinya
-    console.log("title: ", title);
-    console.log("content: ", content);
+    try {
+      const response = await fetch("http://localhost:5000/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content,
+        }),
+      });
 
-    // Membuat objeck note baru
-    const newNote: Note = {
-      id: notes.length + 1,
-      title: title,
-      content: content,
-    };
-
-    // Membuat array baru dengan urutan:
-    // 1. Catatan baru (newNote) di posisi pertama
-    // 2. Diikuti semua catatan lama (notes) secara berurutan
-    // Contoh PAKAI ... (hasil benar): ["🍊", "🍎", "🍌"]
-    // Contoh TANPA ... (hasil salah ❌): ["🍊", ["🍎", "🍌"]] (ada array di dalam array!)
-    // Tanda ... digunakan untuk "membuka bungkus" array notes.
-    // ... (Spread Operator)
-    setNotes([newNote, ...notes]);
-
-    setTitle("");
-    setContent("");
+      const newNote = await response.json();
+      // Membuat array baru dengan urutan:
+      // 1. Catatan baru (newNote) di posisi pertama
+      // 2. Diikuti semua catatan lama (notes) secara berurutan
+      // Contoh PAKAI ... (hasil benar): ["🍊", "🍎", "🍌"]
+      // Contoh TANPA ... (hasil salah ❌): ["🍊", ["🍎", "🍌"]] (ada array di dalam array!)
+      // Tanda ... digunakan untuk "membuka bungkus" array notes.
+      // ... (Spread Operator)
+      setNotes([newNote, ...notes]);
+      setTitle("");
+      setContent("");
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   const handleUpdateNote = (event: React.FormEvent) => {
@@ -108,15 +96,13 @@ const App = () => {
     setSelectedNote(null);
   };
 
-  const deleteNote = (event: React.MouseEvent, noteId:number) => {
+  const deleteNote = (event: React.MouseEvent, noteId: number) => {
     event.stopPropagation();
 
-    const updatedNotes = notes.filter(
-      (note)=> note.id !== noteId
-    )
+    const updatedNotes = notes.filter((note) => note.id !== noteId);
 
     setNotes(updatedNotes);
-  }
+  };
   return (
     <div className="app-container">
       <form
@@ -147,7 +133,7 @@ const App = () => {
         {notes.map((note) => (
           <div className="note-item" onClick={() => handleNoteClick(note)}>
             <div className="notes-header">
-              <button onClick={(event)=>deleteNote(event, note.id)}>x</button>
+              <button onClick={(event) => deleteNote(event, note.id)}>x</button>
             </div>
             <h2>{note.title}</h2>
             <p>{note.content}</p>
