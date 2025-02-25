@@ -18,7 +18,7 @@ const App = () => {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        const response = await fetch("http://localhost:5000:/api/notes");
+        const response = await fetch("http://localhost:5000/api/notes");
 
         const notes: Note[] = await response.json();
 
@@ -37,7 +37,7 @@ const App = () => {
   };
 
   // Fungsi handle saat submit
-  const handdleAddNote = async (event: React.FormEvent) => {
+  const handleAddNote = async (event: React.FormEvent) => {
     event.preventDefault(); // mencegah halaman reload
     try {
       const response = await fetch("http://localhost:5000/api/notes", {
@@ -67,27 +67,41 @@ const App = () => {
     }
   };
 
-  const handleUpdateNote = (event: React.FormEvent) => {
+  const handleUpdateNote = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!selectedNote) {
       return;
     }
 
-    const updateNote: Note = {
-      id: selectedNote.id,
-      title: title,
-      content: content,
-    };
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/notes/${selectedNote.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            content,
+          }),
+        }
+      );
 
-    const updatedNotesList = notes.map((note) =>
-      note.id === selectedNote.id ? updateNote : note
-    );
+      const updatedNote = await response.json();
 
-    setNotes(updatedNotesList);
-    setTitle("");
-    setContent("");
-    setSelectedNote(null);
+      const updatedNotesList = notes.map((note) =>
+        note.id === selectedNote.id ? updatedNote : note
+      );
+
+      setNotes(updatedNotesList);
+      setTitle("");
+      setContent("");
+      setSelectedNote(null);
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   const handleCancel = () => {
@@ -96,19 +110,23 @@ const App = () => {
     setSelectedNote(null);
   };
 
-  const deleteNote = (event: React.MouseEvent, noteId: number) => {
+  const deleteNote = async (event: React.MouseEvent, noteId: number) => {
     event.stopPropagation();
+    try {
+      await fetch(`http://localhost:5000/api/notes/${noteId}`, {
+        method: "DELETE",
+      });
+      const updatedNotes = notes.filter((note) => note.id !== noteId);
 
-    const updatedNotes = notes.filter((note) => note.id !== noteId);
-
-    setNotes(updatedNotes);
+      setNotes(updatedNotes);
+    } catch (e) {}
   };
   return (
     <div className="app-container">
       <form
         className="note-form"
         onSubmit={(event) =>
-          selectedNote ? handleUpdateNote(event) : handdleAddNote(event)
+          selectedNote ? handleUpdateNote(event) : handleAddNote(event)
         }
       >
         <input
@@ -127,11 +145,14 @@ const App = () => {
         ) : (
           <button type="submit">Add Note</button>
         )}
-        <button type="submit">Add Note</button>
       </form>
       <div className="notes-grid">
         {notes.map((note) => (
-          <div className="note-item" onClick={() => handleNoteClick(note)}>
+          <div
+            key={note.id}
+            className="note-item"
+            onClick={() => handleNoteClick(note)}
+          >
             <div className="notes-header">
               <button onClick={(event) => deleteNote(event, note.id)}>x</button>
             </div>
